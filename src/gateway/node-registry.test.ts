@@ -837,6 +837,34 @@ describe("gateway/node-registry", () => {
     ]);
   });
 
+  it("refreshes node-hosted plugin tools after plugin descriptors load", () => {
+    const registry = createTestNodeRegistry();
+    registry.register(
+      makeClient("conn-1", "node-1", [], {
+        commands: ["demo.echo"],
+        nodePluginTools: [
+          {
+            pluginId: "demo",
+            name: "demo_echo",
+            description: "Echo through the node",
+            command: "demo.echo",
+          },
+        ],
+      }),
+      {},
+    );
+
+    expect(registry.get("node-1")?.nodePluginTools).toEqual([]);
+
+    registerDemoNodePluginTool({ name: "demo_echo", command: "demo.echo" });
+    registry.refreshNodePluginTools();
+
+    expect(registry.get("node-1")?.nodePluginTools.map((tool) => tool.name)).toEqual(["demo_echo"]);
+    expect(listConnectedNodePluginTools().map((entry) => entry.descriptor.name)).toEqual([
+      "demo_echo",
+    ]);
+  });
+
   it("ignores node plugin tool updates from stale connections", () => {
     registerDemoNodePluginTool({ name: "demo_echo", command: "demo.echo" });
     const registry = createTestNodeRegistry();

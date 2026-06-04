@@ -208,6 +208,28 @@ export class NodeRegistry {
     });
   }
 
+  private replaceEffectiveNodePluginTools(node: NodeSession): void {
+    const nodePluginTools = this.normalizePluginToolDescriptors({
+      tools: node.declaredNodePluginTools,
+      allowedCommands: node.commands,
+    });
+    node.nodePluginTools = nodePluginTools;
+    node.client.connect.nodePluginTools = nodePluginTools;
+    replaceConnectedNodePluginTools({
+      nodeId: node.nodeId,
+      displayName: node.displayName,
+      platform: node.platform,
+      remoteIp: node.remoteIp,
+      tools: nodePluginTools,
+    });
+  }
+
+  refreshNodePluginTools(): void {
+    for (const node of this.nodesById.values()) {
+      this.replaceEffectiveNodePluginTools(node);
+    }
+  }
+
   /** Register a websocket client as the current connection for its node id. */
   register(client: GatewayWsClient, opts: { remoteIp?: string | undefined }) {
     const connect = client.connect;
@@ -238,9 +260,9 @@ export class NodeRegistry {
       typeof (connect as { pathEnv?: string }).pathEnv === "string"
         ? (connect as { pathEnv?: string }).pathEnv
         : undefined;
-    const declaredNodePluginTools = this.normalizePluginToolDescriptors({
-      tools: Array.isArray(connect.nodePluginTools) ? connect.nodePluginTools : [],
-    });
+    const declaredNodePluginTools = Array.isArray(connect.nodePluginTools)
+      ? [...connect.nodePluginTools]
+      : [];
     const nodePluginTools = this.normalizePluginToolDescriptors({
       tools: declaredNodePluginTools,
       allowedCommands: commands,
@@ -422,23 +444,8 @@ export class NodeRegistry {
     if (!node || node.connId !== connId) {
       return null;
     }
-    const declaredNodePluginTools = this.normalizePluginToolDescriptors({
-      tools,
-    });
-    const nodePluginTools = this.normalizePluginToolDescriptors({
-      tools: declaredNodePluginTools,
-      allowedCommands: node.commands,
-    });
-    node.declaredNodePluginTools = declaredNodePluginTools;
-    node.nodePluginTools = nodePluginTools;
-    node.client.connect.nodePluginTools = nodePluginTools;
-    replaceConnectedNodePluginTools({
-      nodeId,
-      displayName: node.displayName,
-      platform: node.platform,
-      remoteIp: node.remoteIp,
-      tools: nodePluginTools,
-    });
+    node.declaredNodePluginTools = [...tools];
+    this.replaceEffectiveNodePluginTools(node);
     return node;
   }
 
@@ -460,18 +467,7 @@ export class NodeRegistry {
     const nextCommands = surface.commands.filter((command) => declaredCommands.has(command));
     node.commands = nextCommands;
     (node.client.connect as { commands?: string[] }).commands = nextCommands;
-    node.nodePluginTools = this.normalizePluginToolDescriptors({
-      tools: node.declaredNodePluginTools,
-      allowedCommands: nextCommands,
-    });
-    node.client.connect.nodePluginTools = node.nodePluginTools;
-    replaceConnectedNodePluginTools({
-      nodeId,
-      displayName: node.displayName,
-      platform: node.platform,
-      remoteIp: node.remoteIp,
-      tools: node.nodePluginTools,
-    });
+    this.replaceEffectiveNodePluginTools(node);
 
     if ("caps" in surface) {
       const declaredCaps = new Set(node.declaredCaps);
