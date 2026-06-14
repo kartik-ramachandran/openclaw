@@ -10,6 +10,7 @@ describe("session accessor boundary guard", () => {
   it("ratchets only the files migrated by the session accessor slices", () => {
     expect(migratedSessionAccessorFiles).toEqual(
       new Set([
+        "src/agents/embedded-agent-runner/run/attempt.ts",
         "src/commands/export-trajectory.ts",
         "src/commands/health.ts",
         "src/commands/sandbox-explain.ts",

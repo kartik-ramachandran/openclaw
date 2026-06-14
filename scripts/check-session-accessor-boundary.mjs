@@ -25,6 +25,7 @@ const legacyWriterNames = new Set([
 ]);
 
 export const migratedSessionAccessorFiles = new Set([
+  "src/agents/embedded-agent-runner/run/attempt.ts",
   "src/commands/export-trajectory.ts",
   "src/commands/health.ts",
   "src/commands/sandbox-explain.ts",
@@ -172,6 +173,7 @@ export function findSessionAccessorWriteBoundaryViolations(content, fileName = "
 export async function main() {
   const repoRoot = resolveRepoRoot(import.meta.url);
   const readSourceRoots = resolveSourceRoots(repoRoot, [
+    "src/agents",
     "src/commands",
     "src/config/sessions",
     "src/cron",
