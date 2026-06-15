@@ -1075,6 +1075,7 @@ async function finalizeCronRun(params: {
     deliveryPayloads,
     deliveryPayloadHasStructuredContent,
     hasFatalStructuredErrorPayload,
+    bypassCronDelivery,
     pendingPresentationWarningError,
   } = cronPayloadOutcome;
   let { summary, outputText, hasFatalErrorPayload, embeddedRunError } = cronPayloadOutcome;
@@ -1122,9 +1123,13 @@ async function finalizeCronRun(params: {
     didSendViaMessageTool: finalRunResult.didSendViaMessagingTool,
     messageToolSentTargets: finalRunResult.messagingToolSentTargets,
   });
-  if (hasFatalStructuredErrorPayload && prepared.deliveryRequested) {
+  if ((hasFatalStructuredErrorPayload || bypassCronDelivery) && prepared.deliveryRequested) {
     // Structured run error payloads belong in cron state and failure alerts,
     // not the normal completion announce path where provider JSON can leak.
+    //
+    // Also skips delivery when the failure signal explicitly requests bypass
+    // (e.g. unknown-tool loop exhaustion — #92535) so the injected self-debug
+    // text never reaches the user channel.
     const { cleanupDirectCronSession } = await loadCronDeliveryRuntime();
     await cleanupDirectCronSession({
       job: prepared.input.job,
